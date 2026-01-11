@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trợ Lý Văn Bản Hành Chính</title>
+  <!-- ✅ ĐÃ SỬA: XÓA TOÀN BỘ KHOẢNG TRẮNG THỪA TRONG URL -->
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://unpkg.com/docx@7.4.1/build/index.js"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #c7d2fe;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-secondary: #64748b;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, var(--bg), #e0e7ff);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .subtitle {
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 16px;
+    }
+    .upload-area:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .file-input {
+      display: none;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 15px;
+      resize: vertical;
+      margin-bottom: 16px;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    button:hover:not(:disabled) {
+      background: #4338ca;
+    }
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    .summary-output {
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 10px;
+      margin-top: 16px;
+      min-height: 100px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .footer-note {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-top: 30px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Trợ Lý Văn Bản Hành Chính
+      </h1>
+      <p class="subtitle">Tải lên văn bản hành chính — hệ thống sẽ tự động trích xuất thông tin và đề mục chính...</p>
+    </header>
+
+    <main>
+      <div class="card">
+        <div class="upload-area" id="dropArea">
+          <p>📄 Kéo thả file Word/PDF vào đây</p>
+          <p style="font-size:0.9rem;color:#64748b;margin-top:6px">Hỗ trợ: .txt, .docx, .pdf</p>
+          <input type="file" id="fileInput" class="file-input" accept=".txt,.docx,.pdf" />
+        </div>
+
+        <label for="textInput">Văn bản gốc:</label>
+        <textarea id="textInput" placeholder="Hoặc dán văn bản vào đây..."></textarea>
+
+        <label for="instructionInput">Yêu cầu xử lý:</label>
+        <textarea id="instructionInput" placeholder="Ví dụ: 'Lấy số, ngày ký, tiêu đề, nội dung chính và các đề mục'">Lấy số, ngày ký, tiêu đề, nội dung chính và các đề mục</textarea>
+
+        <button id="processBtn" style="width:100%;">
+          <span id="btnText">Xử Lý Văn Bản</span>
+        </button>
+      </div>
+
+      <div class="card" id="resultCard" style="display:none;">
+        <h3>Kết Quả Xử Lý</h3>
+        <div class="summary-output" id="summaryOutput"></div>
+        <div class="actions">
+          <button id="downloadWordBtn" class="btn-outline">
+            Tải xuống Word (.docx)
+          </button>
+          <button id="downloadPdfBtn" class="btn-outline">
+            Tải xuống PDF
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <div class="footer-note">
+      💡 Ứng dụng này sử dụng regex để trích xuất thông tin — phù hợp với văn bản hành chính chuẩn.
+    </div>
+  </div>
+
+  <script>
+    // ✅ SỬA: XÓA KHOẢNG TRẮNG TRONG WORKER SRC
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const fileInput = document.getElementById('fileInput');
+    const textInput = document.getElementById('textInput');
+    const instructionInput = document.getElementById('instructionInput');
+    const dropArea = document.getElementById('dropArea');
+    const processBtn = document.getElementById('processBtn');
+    const btnText = document.getElementById('btnText');
+    const resultCard = document.getElementById('resultCard');
+    const summaryOutput = document.getElementById('summaryOutput');
+    const downloadWordBtn = document.getElementById('downloadWordBtn');
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+
+    let currentText = '';
+
+    // Xử lý kéo thả
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+      dropArea.style.borderColor = '#4f46e5';
+      dropArea.style.backgroundColor = '#c7d2fe';
+    }
+
+    function unhighlight() {
+      dropArea.style.borderColor = '#cbd5e1';
+      dropArea.style.backgroundColor = 'transparent';
+    }
+
+    dropArea.addEventListener('drop', handleDrop, false);
+    fileInput.addEventListener('change', handleFileSelect, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length) {
+        processFile(files[0]);
+      }
+    }
+
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      if (files.length) {
+        processFile(files[0]);
+      }
+    }
+
+    function processFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const reader = new FileReader();
+
+      if (ext === 'txt') {
+        reader.onload = function(e) {
+          textInput.value = e.target.result;
+          currentText = e.target.result;
+        };
+        reader.readAsText(file);
+      } else if (ext === 'docx') {
+        reader.onload = async function(e) {
+          try {
+            const arrayBuffer = e.target.result;
+            const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+            textInput.value = result.value;
+            currentText = result.value;
+          } catch (err) {
+            alert('Không thể đọc file Word: ' + err.message);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else if (ext === 'pdf') {
+        reader.onload = async function(e) {
+          try {
+            const typedarray = new Uint8Array(e.target.result);
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items.map(item => item.str).join(' ');
+              fullText += pageText + ' ';
+            }
+            textInput.value = fullText;
+            currentText = fullText;
+          } catch (err) {
+            alert('Không thể đọc file PDF: ' + err.message);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        alert('Định dạng file không được hỗ trợ.');
+      }
+    }
+
+    // Trích xuất đề mục chính
+    function extractHeadings(text) {
+      const lines = text.split('\n').filter(line => line.trim().length > 0);
+      const headings = [];
+      
+      const headingPatterns = [
+        /^[IVX]+\.\s+[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ]/,
+        /^\d+\.\s+[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ]/,
+        /^[a-z]\)\s+[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ]/,
+        /^Chương\s+\d+/i,
+        /^Mục\s+[IVX\d]+/i
+      ];
+
+      for (const line of lines) {
+        const cleanLine = line.trim();
+        if (cleanLine.length > 10) {
+          for (const pattern of headingPatterns) {
+            if (pattern.test(cleanLine)) {
+              headings.push(cleanLine);
+              break;
+            }
+          }
+        }
+      }
+      
+      return headings;
+    }
+
+    function extractOfficialDocumentInfo(text) {
+      const result = {
+        soVanBan: "",
+        ngayKy: "",
+        noiKy: "",
+        nguoiKy: "",
+        tieuDe: "",
+        noiDungChinh: "",
+        deMucChinh: []
+      };
+
+      const soRegex = /(SỐ|Số|số)\s*[:\s]\s*([^\n\r]+?)(?=\n|$)/i;
+      const soMatch = text.match(soRegex);
+      if (soMatch) result.soVanBan = soMatch[2].trim();
+
+      const dateRegex = /(Ngày|ngày)\s+(\d{1,2})\s+(tháng|Tháng)\s+(\d{1,2})\s+(năm|Năm)\s+(\d{4})/i;
+      const dateMatch = text.match(dateRegex);
+      if (dateMatch) result.ngayKy = `${dateMatch[2]} tháng ${dateMatch[4]} năm ${dateMatch[6]}`;
+
+      const noiKyRegex = /(Tại|tại|Ở|ở|Địa điểm|địa điểm)\s+([^\n\r.]+)/i;
+      const noiKyMatch = text.match(noiKyRegex);
+      if (noiKyMatch) result.noiKy = noiKyMatch[2].trim();
+
+      const nguoiKyRegex = /(Người ký|ký bởi|Chủ tịch|Trưởng ban|Phó chủ tịch|Phó trưởng ban|Bí thư|Phó bí thư|Ủy ban nhân dân|Đảng ủy)\s*[:\s]\s*([^\n\r]+)/i;
+      const nguoiKyMatch = text.match(nguoiKyRegex);
+      if (nguoiKyMatch) result.nguoiKy = nguoiKyMatch[2].trim();
+
+      const lines = text.split(/\n+/).filter(line => line.trim().length > 0);
+      if (lines.length > 0) {
+        let bestTitle = lines[0].trim();
+        let maxUppercaseRatio = 0;
+        for (const line of lines) {
+          const cleanLine = line.trim();
+          if (cleanLine.length < 10) continue;
+          const uppercaseCount = (cleanLine.match(/[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ]/g) || []).length;
+          const ratio = uppercaseCount / cleanLine.length;
+          if (ratio > maxUppercaseRatio && ratio > 0.3) {
+            maxUppercaseRatio = ratio;
+            bestTitle = cleanLine;
+          }
+        }
+        result.tieuDe = bestTitle;
+      }
+
+      const sentences = text.replace(/\n+/g, ' ').split(/[.!?]+/).filter(s => s.trim().length > 20);
+      if (sentences.length >= 2) {
+        result.noiDungChinh = sentences.slice(0, 2).map(s => s.trim()).join('. ') + '.';
+      } else if (sentences.length === 1) {
+        result.noiDungChinh = sentences[0].trim() + '.';
+      } else {
+        result.noiDungChinh = text.substring(0, 150) + '...';
+      }
+
+      result.deMucChinh = extractHeadings(text);
+      return result;
+    }
+
+    processBtn.addEventListener('click', () => {
+      const input = textInput.value || currentText;
+      if (!input.trim()) {
+        alert('Vui lòng nhập hoặc tải lên văn bản trước.');
+        return;
+      }
+
+      processBtn.disabled = true;
+      btnText.innerHTML = '<span class="loading"></span> Đang xử lý...';
+
+      setTimeout(() => {
+        const info = extractOfficialDocumentInfo(input);
+        
+        let output = "";
+        if (info.soVanBan) output += `Số: ${info.soVanBan}\n`;
+        if (info.ngayKy) output += `Ngày ký: ${info.ngayKy}\n`;
+        if (info.noiKy) output += `Nơi ký: ${info.noiKy}\n`;
+        if (info.nguoiKy) output += `Người ký: ${info.nguoiKy}\n`;
+        if (info.tieuDe) output += `\nTiêu đề: ${info.tieuDe}\n`;
+        if (info.noiDungChinh) output += `\nNội dung chính:\n${info.noiDungChinh}\n`;
+        if (info.deMucChinh.length > 0) {
+          output += `\nCác đề mục chính:\n`;
+          info.deMucChinh.forEach((item, index) => {
+            output += `${index + 1}. ${item}\n`;
+          });
+        }
+
+        summaryOutput.textContent = output;
+        resultCard.style.display = 'block';
+        processBtn.disabled = false;
+        btnText.textContent = 'Xử Lý Lại';
+      }, 800);
+    });
+
+    // ✅ CƠ CHẾ DỰ PHÒNG CHO WORD EXPORT
+    downloadWordBtn.addEventListener('click', () => {
+      const content = summaryOutput.textContent;
+      if (!content) return;
+
+      // Thử tạo file Word
+      try {
+        const { Document, Paragraph, TextRun, Packer } = window.docx;
+        const doc = new Document({
+          sections: [{
+            properties: {},
+            children: [new Paragraph({ children: [new TextRun(content)] })]
+          }]
+        });
+
+        Packer.toBlob(doc).then(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'ket-qua-xu-ly-van-ban.docx';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }).catch(err => {
+          console.error('Word export failed:', err);
+          fallbackToTextDownload(content, 'ket-qua-xu-ly-van-ban.txt');
+        });
+      } catch (err) {
+        console.error('Word creation failed:', err);
+        fallbackToTextDownload(content, 'ket-qua-xu-ly-van-ban.txt');
+      }
+    });
+
+    // ✅ CƠ CHẾ DỰ PHÒNG CHO PDF EXPORT
+    downloadPdfBtn.addEventListener('click', () => {
+      const content = summaryOutput.textContent;
+      if (!content) return;
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const lines = doc.splitTextToSize(content, 180);
+        doc.text(lines, 15, 20);
+        doc.save("ket-qua-xu-ly-van-ban.pdf");
+      } catch (err) {
+        console.error('PDF export failed:', err);
+        fallbackToTextDownload(content, 'ket-qua-xu-ly-van-ban.txt');
+      }
+    });
+
+    // ✅ HÀM DỰ PHÒNG: TẢI XUỐNG FILE VĂN BẢN THÔ
+    function fallbackToTextDownload(content, filename) {
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert(`Đã tải xuống file văn bản thô: ${filename}`);
+    }
+  </script>
+</body>
+</html>
+
